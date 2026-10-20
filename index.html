@@ -1,0 +1,1220 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IronLog - Gym Progress Tracker</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        slate: {
+                            850: '#152033',
+                            900: '#0f172a',
+                            950: '#080d1a',
+                        },
+                        emerald: {
+                            450: '#10b981',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #0f172a;
+            color: #f8fafc;
+            font-family: 'Inter', sans-serif;
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+        .glass-card {
+            background: rgba(30, 41, 59, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        @keyframes pulse-subtle {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+        }
+        .edit-highlight {
+            animation: pulse-subtle 1.5s infinite ease-in-out;
+            border-color: #3b82f6 !important;
+            box-shadow: 0 0 25px -5px rgba(59, 130, 246, 0.35);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col selection:bg-emerald-500 selection:text-slate-950">
+
+    <!-- ================= TOP NAVIGATION BAR (ISSUE #1 & #3) ================= -->
+    <header class="sticky top-0 z-30 bg-slate-900/90 backdrop-blur-md border-b border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <!-- Brand Title -->
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-blue-600 flex items-center justify-center shadow-lg shadow-emerald-500/20">
+                    <i class="fa-solid fa-dumbbell text-slate-950 text-lg transform -rotate-45"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h1 class="text-lg sm:text-xl font-extrabold tracking-tight bg-gradient-to-r from-white via-slate-100 to-emerald-400 bg-clip-text text-transparent">
+                            IronLog
+                        </h1>
+                        <span class="hidden sm:inline-block text-[11px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                            v1.0 Prototype
+                        </span>
+                    </div>
+                    <p class="text-xs text-slate-400 hidden sm:block">Gym Progress & Volume Tracker</p>
+                </div>
+            </div>
+
+            <!-- Right Actions -->
+            <div class="flex items-center gap-2.5 sm:gap-3">
+                <button id="resetDemoBtn" type="button" class="text-xs sm:text-sm font-medium text-slate-300 hover:text-white bg-slate-800/90 hover:bg-slate-700/80 border border-slate-700 px-3 py-2 rounded-xl transition flex items-center gap-2" title="Restore sample Push & Pull workouts">
+                    <i class="fa-solid fa-rotate-left text-blue-400"></i>
+                    <span class="hidden md:inline">Reset Demo Data</span>
+                </button>
+                <button id="focusLoggerBtn" type="button" class="text-xs sm:text-sm font-bold text-slate-950 bg-gradient-to-r from-emerald-400 to-emerald-500 hover:from-emerald-300 hover:to-emerald-400 px-4 py-2.5 rounded-xl shadow-lg shadow-emerald-500/20 transition transform active:scale-95 flex items-center gap-2">
+                    <i class="fa-solid fa-plus"></i>
+                    <span>Log Workout</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- ================= MAIN CONTAINER ================= -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-8">
+
+        <!-- 1. TOP STATS DASHBOARD (4 METRIC CARDS) -->
+        <section aria-label="Key Workout Statistics">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <!-- Stat 1: Total Workouts -->
+                <div class="glass-card rounded-2xl p-5 flex items-center justify-between transition hover:border-slate-700">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Workouts Logged</p>
+                        <p id="statTotalWorkouts" class="text-2xl sm:text-3xl font-extrabold text-white mt-1">0</p>
+                        <p class="text-xs text-emerald-400 mt-1 flex items-center gap-1">
+                            <i class="fa-solid fa-calendar-check"></i>
+                            <span>Consistent training</span>
+                        </p>
+                    </div>
+                    <div class="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 text-xl">
+                        <i class="fa-solid fa-fire-flame-curved"></i>
+                    </div>
+                </div>
+
+                <!-- Stat 2: Total Volume Lifted -->
+                <div class="glass-card rounded-2xl p-5 flex items-center justify-between transition hover:border-slate-700">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Total Volume Lifted</p>
+                        <div class="flex items-baseline gap-1 mt-1">
+                            <p id="statTotalVolume" class="text-2xl sm:text-3xl font-extrabold text-white">0</p>
+                            <span class="text-sm font-bold text-blue-400">kg</span>
+                        </div>
+                        <p class="text-xs text-slate-400 mt-1">Sum of Sets × Reps × Weight</p>
+                    </div>
+                    <div class="w-12 h-12 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 text-xl">
+                        <i class="fa-solid fa-weight-hanging"></i>
+                    </div>
+                </div>
+
+                <!-- Stat 3: Total Exercises Completed -->
+                <div class="glass-card rounded-2xl p-5 flex items-center justify-between transition hover:border-slate-700">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Exercises Completed</p>
+                        <p id="statTotalExercises" class="text-2xl sm:text-3xl font-extrabold text-white mt-1">0</p>
+                        <p id="statTotalSets" class="text-xs text-slate-400 mt-1">Across 0 working sets</p>
+                    </div>
+                    <div class="w-12 h-12 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 text-xl">
+                        <i class="fa-solid fa-list-check"></i>
+                    </div>
+                </div>
+
+                <!-- Stat 4: Top Muscle Group -->
+                <div class="glass-card rounded-2xl p-5 flex items-center justify-between transition hover:border-slate-700">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Top Muscle Group</p>
+                        <p id="statTopMuscle" class="text-2xl sm:text-3xl font-extrabold text-emerald-400 mt-1">—</p>
+                        <p id="statTopMuscleCount" class="text-xs text-slate-400 mt-1">Most frequently targeted</p>
+                    </div>
+                    <div class="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 text-xl">
+                        <i class="fa-solid fa-trophy"></i>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. MAIN CONTENT AREA (2-COLUMN LAYOUT ON DESKTOP, STACKED ON MOBILE) -->
+        <section class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+
+            <!-- LEFT / MAIN COLUMN: RECENT WORKOUTS LIST (7 cols on lg) -->
+            <div class="lg:col-span-7 space-y-5">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                        <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                            <i class="fa-solid fa-clock-rotate-left text-emerald-400 text-base"></i>
+                            <span>Recent Workouts</span>
+                        </h2>
+                        <p class="text-xs text-slate-400">Filter by muscle group, add quick sets, or edit past sessions</p>
+                    </div>
+
+                    <!-- Search Box -->
+                    <div class="relative w-full sm:w-64">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                        <input
+                            id="searchWorkoutInput"
+                            type="text"
+                            placeholder="Search workout or exercise..."
+                            class="w-full bg-slate-800/90 border border-slate-700 focus:border-emerald-400 rounded-xl pl-9 pr-3 py-2 text-xs sm:text-sm text-white placeholder-slate-400 focus:outline-none transition"
+                        >
+                    </div>
+                </div>
+
+                <!-- Muscle Group Filter Bar -->
+                <div id="muscleFilterBar" class="flex items-center gap-2 overflow-x-auto pb-2 pt-0.5 no-scrollbar">
+                    <button data-muscle="All" class="muscle-filter-btn active-filter px-3.5 py-1.5 rounded-xl text-xs font-semibold transition whitespace-nowrap bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20">
+                        All Workouts
+                    </button>
+                    <button data-muscle="Chest" class="muscle-filter-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold transition whitespace-nowrap bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700">
+                        Chest
+                    </button>
+                    <button data-muscle="Back" class="muscle-filter-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold transition whitespace-nowrap bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700">
+                        Back
+                    </button>
+                    <button data-muscle="Legs" class="muscle-filter-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold transition whitespace-nowrap bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700">
+                        Legs
+                    </button>
+                    <button data-muscle="Shoulders" class="muscle-filter-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold transition whitespace-nowrap bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700">
+                        Shoulders
+                    </button>
+                    <button data-muscle="Arms" class="muscle-filter-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold transition whitespace-nowrap bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700">
+                        Arms
+                    </button>
+                    <button data-muscle="Core" class="muscle-filter-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold transition whitespace-nowrap bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700">
+                        Core
+                    </button>
+                </div>
+
+                <!-- Workouts Feed Container -->
+                <div id="workoutsListContainer" class="space-y-4">
+                    <!-- Populated dynamically via JS -->
+                </div>
+            </div>
+
+            <!-- RIGHT / SIDE COLUMN: LOG NEW WORKOUT BUILDER (5 cols on lg) -->
+            <div class="lg:col-span-5 lg:sticky lg:top-24">
+                <div id="workoutBuilderCard" class="glass-card rounded-2xl p-5 sm:p-6 border border-slate-700/80 shadow-xl transition-all duration-300">
+                    <div class="flex items-center justify-between border-b border-slate-800 pb-4 mb-5">
+                        <div class="flex items-center gap-2.5">
+                            <div id="builderIconBadge" class="w-9 h-9 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                                <i class="fa-solid fa-pen-to-square"></i>
+                            </div>
+                            <div>
+                                <h2 id="builderHeading" class="text-lg font-bold text-white">Log New Workout</h2>
+                                <p id="builderSubheading" class="text-xs text-slate-400">Add exercises to your session & save</p>
+                            </div>
+                        </div>
+                        <button id="cancelEditBtn" type="button" class="hidden text-xs font-semibold text-rose-400 hover:text-rose-300 bg-rose-500/10 border border-rose-500/20 px-2.5 py-1.5 rounded-lg transition">
+                            Cancel Edit
+                        </button>
+                    </div>
+
+                    <!-- Workout Metadata Form -->
+                    <form id="workoutForm" class="space-y-5" onsubmit="return false;">
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div class="sm:col-span-2">
+                                <label for="workoutTitleInput" class="block text-xs font-semibold text-slate-300 mb-1.5">
+                                    Workout Title <span class="text-emerald-400">*</span>
+                                </label>
+                                <input
+                                    id="workoutTitleInput"
+                                    type="text"
+                                    placeholder="e.g., Push Day - Hypertrophy"
+                                    required
+                                    class="w-full bg-slate-900/90 border border-slate-700 focus:border-emerald-400 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none transition"
+                                >
+                            </div>
+                            <div>
+                                <label for="workoutDateInput" class="block text-xs font-semibold text-slate-300 mb-1.5">
+                                    Date <span class="text-emerald-400">*</span>
+                                </label>
+                                <input
+                                    id="workoutDateInput"
+                                    type="date"
+                                    required
+                                    class="w-full bg-slate-900/90 border border-slate-700 focus:border-emerald-400 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none transition"
+                                >
+                            </div>
+                        </div>
+
+                        <!-- Dynamic Add Exercise Sub-panel -->
+                        <div class="bg-slate-900/75 border border-slate-800 rounded-2xl p-4 space-y-3.5">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs font-bold uppercase tracking-wider text-blue-400 flex items-center gap-1.5">
+                                    <i class="fa-solid fa-dumbbell"></i>
+                                    Add Exercise to Workout
+                                </span>
+                                <!-- Quick Preset Buttons -->
+                                <div class="flex items-center gap-1">
+                                    <button type="button" data-preset='{"name":"Bench Press","muscle":"Chest","sets":4,"reps":8,"weight":80}' class="preset-btn text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-0.5 rounded-md border border-slate-700 transition">
+                                        +Bench
+                                    </button>
+                                    <button type="button" data-preset='{"name":"Barbell Squat","muscle":"Legs","sets":4,"reps":6,"weight":100}' class="preset-btn text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-0.5 rounded-md border border-slate-700 transition">
+                                        +Squat
+                                    </button>
+                                    <button type="button" data-preset='{"name":"Lat Pulldown","muscle":"Back","sets":3,"reps":10,"weight":65}' class="preset-btn text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-0.5 rounded-md border border-slate-700 transition">
+                                        +Lat
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Exercise Name & Muscle Group -->
+                            <div class="grid grid-cols-1 sm:grid-cols-12 gap-3">
+                                <div class="sm:col-span-7">
+                                    <label for="exerciseNameInput" class="block text-[11px] font-medium text-slate-400 mb-1">Exercise Name</label>
+                                    <input
+                                        id="exerciseNameInput"
+                                        type="text"
+                                        placeholder="e.g., Incline Dumbbell Press"
+                                        class="w-full bg-slate-800 border border-slate-700 focus:border-blue-400 rounded-xl px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none transition"
+                                    >
+                                </div>
+                                <div class="sm:col-span-5">
+                                    <label for="exerciseMuscleSelect" class="block text-[11px] font-medium text-slate-400 mb-1">Muscle Group</label>
+                                    <select
+                                        id="exerciseMuscleSelect"
+                                        class="w-full bg-slate-800 border border-slate-700 focus:border-blue-400 rounded-xl px-3 py-2 text-sm text-white focus:outline-none transition"
+                                    >
+                                        <option value="Chest">Chest</option>
+                                        <option value="Back">Back</option>
+                                        <option value="Legs">Legs</option>
+                                        <option value="Shoulders">Shoulders</option>
+                                        <option value="Arms">Arms</option>
+                                        <option value="Core">Core</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Sets, Reps, Weight (kg) -->
+                            <div class="grid grid-cols-3 gap-3">
+                                <div>
+                                    <label for="exerciseSetsInput" class="block text-[11px] font-medium text-slate-400 mb-1">Sets</label>
+                                    <input
+                                        id="exerciseSetsInput"
+                                        type="number"
+                                        min="1"
+                                        max="30"
+                                        value="3"
+                                        class="w-full bg-slate-800 border border-slate-700 focus:border-blue-400 rounded-xl px-3 py-2 text-sm font-semibold text-white text-center focus:outline-none transition"
+                                    >
+                                </div>
+                                <div>
+                                    <label for="exerciseRepsInput" class="block text-[11px] font-medium text-slate-400 mb-1">Reps</label>
+                                    <input
+                                        id="exerciseRepsInput"
+                                        type="number"
+                                        min="1"
+                                        max="100"
+                                        value="10"
+                                        class="w-full bg-slate-800 border border-slate-700 focus:border-blue-400 rounded-xl px-3 py-2 text-sm font-semibold text-white text-center focus:outline-none transition"
+                                    >
+                                </div>
+                                <div>
+                                    <label for="exerciseWeightInput" class="block text-[11px] font-medium text-slate-400 mb-1">Weight (kg)</label>
+                                    <input
+                                        id="exerciseWeightInput"
+                                        type="number"
+                                        min="0"
+                                        max="500"
+                                        step="0.5"
+                                        value="60"
+                                        class="w-full bg-slate-800 border border-slate-700 focus:border-blue-400 rounded-xl px-3 py-2 text-sm font-semibold text-emerald-400 text-center focus:outline-none transition"
+                                    >
+                                </div>
+                            </div>
+
+                            <!-- Add Exercise to Draft List Button -->
+                            <button
+                                id="addExerciseToListBtn"
+                                type="button"
+                                class="w-full py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold text-blue-400 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 transition flex items-center justify-center gap-2"
+                            >
+                                <i class="fa-solid fa-plus-circle"></i>
+                                <span>+ Add Exercise to List</span>
+                            </button>
+                        </div>
+
+                        <!-- Draft Exercises Preview List -->
+                        <div class="space-y-2">
+                            <div class="flex items-center justify-between text-xs">
+                                <span class="font-semibold text-slate-300">Exercises in this Workout (<span id="draftExerciseCount">0</span>)</span>
+                                <span id="draftVolumePreview" class="font-bold text-emerald-400">Draft Volume: 0 kg</span>
+                            </div>
+
+                            <div id="draftExercisesContainer" class="max-h-60 overflow-y-auto space-y-2 pr-1">
+                                <!-- Populated dynamically -->
+                            </div>
+                        </div>
+
+                        <!-- Final Save Workout Button -->
+                        <button
+                            id="saveWorkoutBtn"
+                            type="button"
+                            class="w-full py-3 px-5 rounded-xl font-bold text-sm text-slate-950 bg-gradient-to-r from-emerald-400 to-emerald-500 hover:from-emerald-300 hover:to-emerald-400 shadow-lg shadow-emerald-500/20 transition transform active:scale-98 flex items-center justify-center gap-2"
+                        >
+                            <i class="fa-solid fa-floppy-disk"></i>
+                            <span id="saveWorkoutBtnText">Save Workout</span>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- ================= FOOTER ================= -->
+    <footer class="border-t border-slate-800/80 bg-slate-950/60 mt-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-400">
+            <div class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                <span><strong>IronLog</strong> — Built with OOP Data Models (<code class="text-emerald-400">Exercise</code> & <code class="text-blue-400">Workout</code>) & GitHub Flow</span>
+            </div>
+            <div class="flex items-center gap-4">
+                <button id="footerResetBtn" type="button" class="text-slate-400 hover:text-emerald-400 underline transition">
+                    Reset Demo Data
+                </button>
+                <span>LocalStorage Persistence Active</span>
+            </div>
+        </div>
+    </footer>
+
+    <!-- ================= CUSTOM CONFIRMATION MODAL (NO NATIVE ALERT/CONFIRM) ================= -->
+    <div id="confirmModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
+        <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 transform transition-all">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 text-lg">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                </div>
+                <div>
+                    <h3 id="modalTitle" class="text-base font-bold text-white">Confirm Action</h3>
+                    <p id="modalMessage" class="text-xs text-slate-400 mt-0.5">Are you sure you want to proceed?</p>
+                </div>
+            </div>
+            <div class="flex items-center justify-end gap-3 pt-2">
+                <button id="modalCancelBtn" type="button" class="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition">
+                    Cancel
+                </button>
+                <button id="modalConfirmBtn" type="button" class="px-4 py-2 rounded-xl text-xs font-bold bg-rose-500 hover:bg-rose-400 text-slate-950 transition">
+                    Confirm
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= TOAST NOTIFICATION CONTAINER ================= -->
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- ================= APPLICATION JAVASCRIPT ================= -->
+    <script>
+        /**
+         * ============================================================================
+         * ISSUE #2: EXERCISE & WORKOUT DATA MODELS (OOP Architecture)
+         * Mirrors the Dart/Flutter model structure with toMap() & fromMap() methods
+         * ============================================================================
+         */
+        class Exercise {
+            constructor(id, name, muscleGroup, sets, reps, weight) {
+                this.id = id || 'ex_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6);
+                this.name = name.trim();
+                this.muscleGroup = muscleGroup;
+                this.sets = Number(sets) || 1;
+                this.reps = Number(reps) || 1;
+                this.weight = Number(weight) || 0;
+            }
+
+            // Calculate volume for this specific exercise (Sets * Reps * Weight)
+            getVolume() {
+                return this.sets * this.reps * this.weight;
+            }
+
+            // Serialize for database/localStorage storage
+            toMap() {
+                return {
+                    id: this.id,
+                    name: this.name,
+                    muscleGroup: this.muscleGroup,
+                    sets: this.sets,
+                    reps: this.reps,
+                    weight: this.weight
+                };
+            }
+
+            // Factory constructor from plain object
+            static fromMap(map) {
+                return new Exercise(
+                    map.id,
+                    map.name,
+                    map.muscleGroup,
+                    map.sets,
+                    map.reps,
+                    map.weight
+                );
+            }
+        }
+
+        class Workout {
+            constructor(id, title, date, exercises = []) {
+                this.id = id || 'wk_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6);
+                this.title = title.trim();
+                this.date = date; // YYYY-MM-DD
+                this.exercises = exercises.map(ex => ex instanceof Exercise ? ex : Exercise.fromMap(ex));
+            }
+
+            // Total volume lifted in this workout (kg)
+            getTotalVolume() {
+                return this.exercises.reduce((total, ex) => total + ex.getVolume(), 0);
+            }
+
+            // Total working sets in this workout
+            getTotalSets() {
+                return this.exercises.reduce((total, ex) => total + ex.sets, 0);
+            }
+
+            // Unique muscle groups targeted in this workout
+            getMuscleGroups() {
+                return [...new Set(this.exercises.map(ex => ex.muscleGroup))];
+            }
+
+            // Serialize workout to plain map for JSON / Firebase / localStorage
+            toMap() {
+                return {
+                    id: this.id,
+                    title: this.title,
+                    date: this.date,
+                    exercises: this.exercises.map(ex => ex.toMap())
+                };
+            }
+
+            // Restore Workout instance from plain object
+            static fromMap(map) {
+                const exercises = Array.isArray(map.exercises)
+                    ? map.exercises.map(exMap => Exercise.fromMap(exMap))
+                    : [];
+                return new Workout(map.id, map.title, map.date, exercises);
+            }
+        }
+
+        /**
+         * ============================================================================
+         * STATE & STORAGE MANAGEMENT
+         * ============================================================================
+         */
+        const STORAGE_KEY = 'ironlog_workouts_v1';
+        let workouts = [];
+        let draftExercises = [];
+        let editingWorkoutId = null;
+        let activeMuscleFilter = 'All';
+        let searchQuery = '';
+
+        // Color badge mapping per muscle group
+        const MUSCLE_BADGE_STYLES = {
+            Chest: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
+            Back: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
+            Legs: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
+            Shoulders: 'bg-purple-500/15 text-purple-400 border-purple-500/30',
+            Arms: 'bg-cyan-500/15 text-cyan-400 border-cyan-500/30',
+            Core: 'bg-rose-500/15 text-rose-400 border-rose-500/30'
+        };
+
+        // Generate 2 realistic sample workouts
+        function getDefaultSampleWorkouts() {
+            const today = new Date();
+            const twoDaysAgo = new Date(today);
+            twoDaysAgo.setDate(today.getDate() - 2);
+            const fourDaysAgo = new Date(today);
+            fourDaysAgo.setDate(today.getDate() - 4);
+
+            const formatDate = (d) => d.toISOString().split('T')[0];
+
+            const pushWorkout = new Workout(
+                'wk_sample_push',
+                'Push Day - Hypertrophy',
+                formatDate(twoDaysAgo),
+                [
+                    new Exercise('ex_1', 'Incline Barbell Bench Press', 'Chest', 4, 8, 75),
+                    new Exercise('ex_2', 'Seated Overhead Dumbbell Press', 'Shoulders', 3, 10, 26),
+                    new Exercise('ex_3', 'Cable Lateral Raises', 'Shoulders', 3, 15, 12.5),
+                    new Exercise('ex_4', 'Rope Tricep Pushdowns', 'Arms', 3, 12, 35)
+                ]
+            );
+
+            const pullWorkout = new Workout(
+                'wk_sample_pull',
+                'Heavy Pull Day',
+                formatDate(fourDaysAgo),
+                [
+                    new Exercise('ex_5', 'Barbell Bent-Over Row', 'Back', 4, 8, 85),
+                    new Exercise('ex_6', 'Wide-Grip Lat Pulldown', 'Back', 3, 10, 70),
+                    new Exercise('ex_7', 'EZ-Bar Preacher Curls', 'Arms', 3, 12, 32.5),
+                    new Exercise('ex_8', 'Hanging Leg Raises', 'Core', 3, 15, 0)
+                ]
+            );
+
+            return [pushWorkout, pullWorkout];
+        }
+
+        function loadWorkoutsFromStorage() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                if (!raw) {
+                    workouts = getDefaultSampleWorkouts();
+                    saveWorkoutsToStorage();
+                } else {
+                    const parsed = JSON.parse(raw);
+                    workouts = parsed.map(item => Workout.fromMap(item));
+                }
+            } catch (err) {
+                console.error('Error reading localStorage:', err);
+                workouts = getDefaultSampleWorkouts();
+            }
+        }
+
+        function saveWorkoutsToStorage() {
+            try {
+                const serialized = workouts.map(w => w.toMap());
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(serialized));
+            } catch (err) {
+                console.error('Error saving to localStorage:', err);
+            }
+        }
+
+        /**
+         * ============================================================================
+         * UI RENDERING: STATS, WORKOUT FEED & DRAFT BUILDER
+         * ============================================================================
+         */
+        function updateDashboardStats() {
+            const totalWorkouts = workouts.length;
+            let totalVolume = 0;
+            let totalExercises = 0;
+            let totalSets = 0;
+            const muscleCounts = {};
+
+            workouts.forEach(workout => {
+                totalVolume += workout.getTotalVolume();
+                totalExercises += workout.exercises.length;
+                totalSets += workout.getTotalSets();
+
+                workout.exercises.forEach(ex => {
+                    muscleCounts[ex.muscleGroup] = (muscleCounts[ex.muscleGroup] || 0) + ex.sets;
+                });
+            });
+
+            // Determine top muscle group by sets completed
+            let topMuscle = '—';
+            let topMuscleSets = 0;
+            for (const [muscle, count] of Object.entries(muscleCounts)) {
+                if (count > topMuscleSets) {
+                    topMuscle = muscle;
+                    topMuscleSets = count;
+                }
+            }
+
+            document.getElementById('statTotalWorkouts').textContent = totalWorkouts;
+            document.getElementById('statTotalVolume').textContent = totalVolume.toLocaleString('en-US');
+            document.getElementById('statTotalExercises').textContent = totalExercises;
+            document.getElementById('statTotalSets').textContent = `Across ${totalSets} working sets`;
+            document.getElementById('statTopMuscle').textContent = topMuscle;
+            document.getElementById('statTopMuscleCount').textContent =
+                topMuscleSets > 0 ? `${topMuscleSets} working sets logged` : 'Log a workout to see stats';
+        }
+
+        function formatReadableDate(dateStr) {
+            if (!dateStr) return '';
+            const parts = dateStr.split('-');
+            if (parts.length !== 3) return dateStr;
+            const dateObj = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+            return dateObj.toLocaleDateString('en-US', {
+                weekday: 'short',
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric'
+            });
+        }
+
+        function renderWorkoutsList() {
+            const container = document.getElementById('workoutsListContainer');
+            container.innerHTML = '';
+
+            // Filter by muscle group and search term
+            const filtered = workouts
+                .slice()
+                .sort((a, b) => b.date.localeCompare(a.date))
+                .filter(workout => {
+                    const matchesMuscle =
+                        activeMuscleFilter === 'All' ||
+                        workout.getMuscleGroups().includes(activeMuscleFilter);
+
+                    const q = searchQuery.toLowerCase().trim();
+                    const matchesSearch =
+                        !q ||
+                        workout.title.toLowerCase().includes(q) ||
+                        workout.exercises.some(
+                            ex =>
+                                ex.name.toLowerCase().includes(q) ||
+                                ex.muscleGroup.toLowerCase().includes(q)
+                        );
+
+                    return matchesMuscle && matchesSearch;
+                });
+
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                    <div class="glass-card rounded-2xl p-10 text-center space-y-3 border border-dashed border-slate-700">
+                        <div class="w-12 h-12 rounded-2xl bg-slate-800 mx-auto flex items-center justify-center text-slate-400 text-xl">
+                            <i class="fa-solid fa-dumbbell"></i>
+                        </div>
+                        <h3 class="text-base font-bold text-white">No workouts match your filter</h3>
+                        <p class="text-xs text-slate-400 max-w-sm mx-auto">
+                            Try selecting "All Workouts" in the filter bar or log a new session using the Workout Builder.
+                        </p>
+                    </div>
+                `;
+                return;
+            }
+
+            filtered.forEach(workout => {
+                const totalVol = workout.getTotalVolume();
+                const muscles = workout.getMuscleGroups();
+                const isBeingEdited = editingWorkoutId === workout.id;
+
+                const muscleBadgesHtml = muscles
+                    .map(m => {
+                        const badgeClass = MUSCLE_BADGE_STYLES[m] || 'bg-slate-700 text-slate-200 border-slate-600';
+                        return `<span class="text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${badgeClass}">${m}</span>`;
+                    })
+                    .join('');
+
+                const exercisesRowsHtml = workout.exercises
+                    .map(ex => {
+                        const badgeClass = MUSCLE_BADGE_STYLES[ex.muscleGroup] || 'bg-slate-700 text-slate-200 border-slate-600';
+                        const vol = ex.getVolume();
+                        const weightDisplay = ex.weight > 0 ? `${ex.weight} kg` : 'Bodyweight';
+                        return `
+                            <tr class="border-b border-slate-800/70 last:border-none hover:bg-slate-800/30 transition">
+                                <td class="py-2.5 pr-2">
+                                    <div class="font-semibold text-xs sm:text-sm text-slate-100">${escapeHtml(ex.name)}</div>
+                                    <span class="inline-block mt-0.5 text-[10px] font-medium px-2 py-0.2 rounded-md border ${badgeClass}">
+                                        ${ex.muscleGroup}
+                                    </span>
+                                </td>
+                                <td class="py-2.5 px-2 text-center">
+                                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-900/90 border border-slate-700 text-xs font-bold text-white">
+                                        ${ex.sets} <span class="text-slate-400 font-normal">×</span> ${ex.reps}
+                                    </span>
+                                </td>
+                                <td class="py-2.5 px-2 text-center text-xs sm:text-sm font-bold text-emerald-400">
+                                    ${weightDisplay}
+                                </td>
+                                <td class="py-2.5 pl-2 text-right text-xs font-semibold text-slate-300">
+                                    ${vol > 0 ? vol.toLocaleString('en-US') + ' kg' : '—'}
+                                </td>
+                                <td class="py-2.5 pl-2 text-right">
+                                    <button
+                                        type="button"
+                                        onclick="quickAddSet('${workout.id}', '${ex.id}')"
+                                        title="Quickly add +1 set to this exercise"
+                                        class="text-[11px] font-semibold px-2 py-1 rounded-lg bg-blue-500/10 hover:bg-blue-500/25 text-blue-400 border border-blue-500/20 transition"
+                                    >
+                                        +1 Set
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                    })
+                    .join('');
+
+                const card = document.createElement('article');
+                card.className = `glass-card rounded-2xl p-5 transition-all duration-200 hover:border-slate-700 ${
+                    isBeingEdited ? 'ring-2 ring-blue-500/80' : ''
+                }`;
+
+                card.innerHTML = `
+                    <!-- Card Header -->
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3.5 border-b border-slate-800">
+                        <div class="space-y-1">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <h3 class="text-base sm:text-lg font-bold text-white">${escapeHtml(workout.title)}</h3>
+                                ${isBeingEdited ? '<span class="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-blue-500 text-slate-950">Editing</span>' : ''}
+                            </div>
+                            <div class="flex flex-wrap items-center gap-3 text-xs text-slate-400">
+                                <span class="flex items-center gap-1.5">
+                                    <i class="fa-regular fa-calendar text-emerald-400"></i>
+                                    ${formatReadableDate(workout.date)}
+                                </span>
+                                <span>•</span>
+                                <span>${workout.exercises.length} Exercises (${workout.getTotalSets()} sets)</span>
+                            </div>
+                        </div>
+
+                        <!-- Total Workout Volume Badge -->
+                        <div class="flex items-center justify-between sm:justify-end gap-3">
+                            <div class="bg-slate-900/90 border border-slate-700/80 px-3.5 py-1.5 rounded-xl text-right">
+                                <span class="block text-[10px] uppercase tracking-wider text-slate-400">Session Volume</span>
+                                <span class="text-sm font-extrabold text-emerald-400">${totalVol.toLocaleString('en-US')} kg</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Muscle Group Badges -->
+                    <div class="flex flex-wrap items-center gap-1.5 my-3">
+                        ${muscleBadgesHtml}
+                    </div>
+
+                    <!-- Exercises Table -->
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="border-b border-slate-800 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                                    <th class="pb-2 pr-2">Exercise</th>
+                                    <th class="pb-2 px-2 text-center">Sets × Reps</th>
+                                    <th class="pb-2 px-2 text-center">Weight</th>
+                                    <th class="pb-2 pl-2 text-right">Volume</th>
+                                    <th class="pb-2 pl-2 text-right">Quick Log</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${exercisesRowsHtml}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Card Footer Actions -->
+                    <div class="flex items-center justify-between pt-3.5 mt-3 border-t border-slate-800/80">
+                        <span class="text-[11px] text-slate-500 font-mono">ID: ${workout.id.slice(0, 12)}</span>
+                        <div class="flex items-center gap-2">
+                            <button
+                                type="button"
+                                onclick="loadWorkoutForEdit('${workout.id}')"
+                                class="text-xs font-semibold px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-blue-500/20 text-blue-400 border border-slate-700 hover:border-blue-500/40 transition flex items-center gap-1.5"
+                            >
+                                <i class="fa-solid fa-pen-to-square"></i>
+                                <span>+ Add Set / Edit</span>
+                            </button>
+                            <button
+                                type="button"
+                                onclick="confirmDeleteWorkout('${workout.id}')"
+                                class="text-xs font-semibold px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 border border-slate-700 hover:border-rose-500/40 transition flex items-center gap-1.5"
+                                title="Delete workout"
+                            >
+                                <i class="fa-regular fa-trash-can"></i>
+                                <span class="hidden sm:inline">Delete</span>
+                            </button>
+                        </div>
+                    </div>
+                `;
+
+                container.appendChild(card);
+            });
+        }
+
+        function renderDraftExercises() {
+            const container = document.getElementById('draftExercisesContainer');
+            const countEl = document.getElementById('draftExerciseCount');
+            const volPreviewEl = document.getElementById('draftVolumePreview');
+
+            countEl.textContent = draftExercises.length;
+            const totalDraftVolume = draftExercises.reduce((acc, ex) => acc + ex.getVolume(), 0);
+            volPreviewEl.textContent = `Draft Volume: ${totalDraftVolume.toLocaleString('en-US')} kg`;
+
+            if (draftExercises.length === 0) {
+                container.innerHTML = `
+                    <div class="bg-slate-900/50 border border-dashed border-slate-800 rounded-xl p-4 text-center text-xs text-slate-400">
+                        No exercises added yet. Fill in an exercise above and click <strong>"+ Add Exercise to List"</strong>.
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = '';
+            draftExercises.forEach((ex, index) => {
+                const badgeClass = MUSCLE_BADGE_STYLES[ex.muscleGroup] || 'bg-slate-700 text-slate-200';
+                const row = document.createElement('div');
+                row.className = 'flex items-center justify-between bg-slate-900/90 border border-slate-800 rounded-xl px-3 py-2 text-xs';
+                row.innerHTML = `
+                    <div class="flex items-center gap-2 min-w-0 pr-2">
+                        <span class="text-[10px] font-bold px-2 py-0.5 rounded-md border ${badgeClass}">${ex.muscleGroup}</span>
+                        <span class="font-semibold text-white truncate">${escapeHtml(ex.name)}</span>
+                    </div>
+                    <div class="flex items-center gap-3 shrink-0">
+                        <span class="text-slate-300 font-medium">
+                            ${ex.sets} × ${ex.reps} @ <strong class="text-emerald-400">${ex.weight}kg</strong>
+                        </span>
+                        <button
+                            type="button"
+                            onclick="removeDraftExercise(${index})"
+                            class="text-slate-400 hover:text-rose-400 transition"
+                            title="Remove exercise"
+                        >
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+                `;
+                container.appendChild(row);
+            });
+        }
+
+        /**
+         * ============================================================================
+         * INTERACTIVE ACTIONS & EVENT HANDLERS
+         * ============================================================================
+         */
+        function addExerciseToDraft() {
+            const nameInput = document.getElementById('exerciseNameInput');
+            const muscleSelect = document.getElementById('exerciseMuscleSelect');
+            const setsInput = document.getElementById('exerciseSetsInput');
+            const repsInput = document.getElementById('exerciseRepsInput');
+            const weightInput = document.getElementById('exerciseWeightInput');
+
+            const name = nameInput.value.trim();
+            if (!name) {
+                showToast('Please enter an exercise name first.', 'warning');
+                nameInput.focus();
+                return;
+            }
+
+            const sets = Math.max(1, Number(setsInput.value) || 1);
+            const reps = Math.max(1, Number(repsInput.value) || 1);
+            const weight = Math.max(0, Number(weightInput.value) || 0);
+
+            const newExercise = new Exercise(null, name, muscleSelect.value, sets, reps, weight);
+            draftExercises.push(newExercise);
+
+            // Clear exercise name for next entry and re-render preview
+            nameInput.value = '';
+            nameInput.focus();
+            renderDraftExercises();
+            showToast(`Added "${newExercise.name}" to workout list`, 'info');
+        }
+
+        window.removeDraftExercise = function(index) {
+            draftExercises.splice(index, 1);
+            renderDraftExercises();
+        };
+
+        function saveWorkout() {
+            const titleInput = document.getElementById('workoutTitleInput');
+            const dateInput = document.getElementById('workoutDateInput');
+
+            const title = titleInput.value.trim();
+            const date = dateInput.value;
+
+            if (!title) {
+                showToast('Please provide a Workout Title (e.g., Push Day).', 'warning');
+                titleInput.focus();
+                return;
+            }
+
+            // If the user typed an exercise in the inputs but forgot to click "+ Add Exercise to List", auto-include it
+            const pendingExName = document.getElementById('exerciseNameInput').value.trim();
+            if (pendingExName && draftExercises.length === 0) {
+                addExerciseToDraft();
+            }
+
+            if (draftExercises.length === 0) {
+                showToast('Add at least one exercise to your workout before saving.', 'warning');
+                document.getElementById('exerciseNameInput').focus();
+                return;
+            }
+
+            if (editingWorkoutId) {
+                // Update existing workout
+                const index = workouts.findIndex(w => w.id === editingWorkoutId);
+                if (index !== -1) {
+                    workouts[index] = new Workout(editingWorkoutId, title, date, draftExercises);
+                    showToast(`Updated "${title}" successfully!`, 'success');
+                }
+            } else {
+                // Create new workout instance
+                const newWorkout = new Workout(null, title, date, draftExercises);
+                workouts.unshift(newWorkout);
+                showToast(`Logged "${title}" (${newWorkout.getTotalVolume().toLocaleString()} kg volume)!`, 'success');
+            }
+
+            saveWorkoutsToStorage();
+            resetBuilderForm();
+            updateDashboardStats();
+            renderWorkoutsList();
+        }
+
+        // Quick "+1 Set" directly on a workout card
+        window.quickAddSet = function(workoutId, exerciseId) {
+            const workout = workouts.find(w => w.id === workoutId);
+            if (!workout) return;
+            const exercise = workout.exercises.find(e => e.id === exerciseId);
+            if (!exercise) return;
+
+            exercise.sets += 1;
+            saveWorkoutsToStorage();
+            updateDashboardStats();
+            renderWorkoutsList();
+            showToast(`+1 Set added to ${exercise.name} (${exercise.sets} sets total)`, 'success');
+        };
+
+        // Load a workout into the right-hand builder to edit or add exercises
+        window.loadWorkoutForEdit = function(workoutId) {
+            const workout = workouts.find(w => w.id === workoutId);
+            if (!workout) return;
+
+            editingWorkoutId = workout.id;
+            document.getElementById('workoutTitleInput').value = workout.title;
+            document.getElementById('workoutDateInput').value = workout.date;
+            draftExercises = workout.exercises.map(ex => Exercise.fromMap(ex.toMap()));
+
+            // Update Builder UI appearance to Edit Mode
+            document.getElementById('builderHeading').textContent = 'Edit Workout / Add Sets';
+            document.getElementById('builderSubheading').textContent = `Modifying "${workout.title}"`;
+            document.getElementById('saveWorkoutBtnText').textContent = 'Update Workout';
+            document.getElementById('cancelEditBtn').classList.remove('hidden');
+
+            const builderCard = document.getElementById('workoutBuilderCard');
+            builderCard.classList.add('edit-highlight');
+
+            renderDraftExercises();
+            renderWorkoutsList();
+
+            // Smooth scroll to builder on mobile/tablet
+            builderCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        };
+
+        function resetBuilderForm() {
+            editingWorkoutId = null;
+            draftExercises = [];
+            document.getElementById('workoutTitleInput').value = '';
+            document.getElementById('workoutDateInput').value = new Date().toISOString().split('T')[0];
+            document.getElementById('exerciseNameInput').value = '';
+            document.getElementById('exerciseSetsInput').value = 3;
+            document.getElementById('exerciseRepsInput').value = 10;
+            document.getElementById('exerciseWeightInput').value = 60;
+
+            document.getElementById('builderHeading').textContent = 'Log New Workout';
+            document.getElementById('builderSubheading').textContent = 'Add exercises to your session & save';
+            document.getElementById('saveWorkoutBtnText').textContent = 'Save Workout';
+            document.getElementById('cancelEditBtn').classList.add('hidden');
+            document.getElementById('workoutBuilderCard').classList.remove('edit-highlight');
+
+            renderDraftExercises();
+            renderWorkoutsList();
+        }
+
+        // Delete workout with custom modal
+        window.confirmDeleteWorkout = function(workoutId) {
+            const workout = workouts.find(w => w.id === workoutId);
+            if (!workout) return;
+
+            openConfirmModal(
+                'Delete Workout?',
+                `Are you sure you want to delete "${workout.title}"? This action cannot be undone.`,
+                () => {
+                    workouts = workouts.filter(w => w.id !== workoutId);
+                    if (editingWorkoutId === workoutId) {
+                        resetBuilderForm();
+                    }
+                    saveWorkoutsToStorage();
+                    updateDashboardStats();
+                    renderWorkoutsList();
+                    showToast(`Deleted "${workout.title}"`, 'info');
+                }
+            );
+        };
+
+        // Reset Demo Data with custom modal
+        function handleResetDemoData() {
+            openConfirmModal(
+                'Reset Demo Data?',
+                'This will restore the 2 default Push & Pull sample workouts and overwrite current local changes.',
+                () => {
+                    workouts = getDefaultSampleWorkouts();
+                    saveWorkoutsToStorage();
+                    resetBuilderForm();
+                    updateDashboardStats();
+                    renderWorkoutsList();
+                    showToast('Demo workouts restored!', 'success');
+                }
+            );
+        }
+
+        /**
+         * ============================================================================
+         * UTILITIES: CUSTOM MODAL, TOASTS & HTML ESCAPING
+         * ============================================================================
+         */
+        let pendingConfirmAction = null;
+
+        function openConfirmModal(title, message, onConfirm) {
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalMessage').textContent = message;
+            pendingConfirmAction = onConfirm;
+
+            const modal = document.getElementById('confirmModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeConfirmModal() {
+            const modal = document.getElementById('confirmModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            pendingConfirmAction = null;
+        }
+
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+
+            const styles = {
+                success: 'bg-slate-900 border-emerald-500/40 text-emerald-400',
+                info: 'bg-slate-900 border-blue-500/40 text-blue-400',
+                warning: 'bg-slate-900 border-amber-500/40 text-amber-400'
+            };
+
+            const icons = {
+                success: 'fa-circle-check',
+                info: 'fa-circle-info',
+                warning: 'fa-circle-exclamation'
+            };
+
+            toast.className = `pointer-events-auto flex items-center gap-2.5 px-4 py-3 rounded-xl border shadow-xl text-xs font-semibold transition-all duration-300 ${styles[type] || styles.success}`;
+            toast.innerHTML = `
+                <i class="fa-solid ${icons[type] || icons.success} text-sm"></i>
+                <span class="text-slate-100">${escapeHtml(message)}</span>
+            `;
+
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(8px)';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        function escapeHtml(str) {
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        /**
+         * ============================================================================
+         * INITIALIZATION ON DOM LOAD
+         * ============================================================================
+         */
+        window.addEventListener('DOMContentLoaded', () => {
+            // Set today's date in builder
+            document.getElementById('workoutDateInput').value = new Date().toISOString().split('T')[0];
+
+            // Load workouts & render
+            loadWorkoutsFromStorage();
+            updateDashboardStats();
+            renderWorkoutsList();
+            renderDraftExercises();
+
+            // Event Listeners
+            document.getElementById('addExerciseToListBtn').addEventListener('click', addExerciseToDraft);
+            document.getElementById('saveWorkoutBtn').addEventListener('click', saveWorkout);
+            document.getElementById('cancelEditBtn').addEventListener('click', resetBuilderForm);
+
+            // Enter key inside exercise name input adds exercise to draft
+            document.getElementById('exerciseNameInput').addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    addExerciseToDraft();
+                }
+            });
+
+            // Quick exercise presets
+            document.querySelectorAll('.preset-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const data = JSON.parse(btn.getAttribute('data-preset'));
+                    document.getElementById('exerciseNameInput').value = data.name;
+                    document.getElementById('exerciseMuscleSelect').value = data.muscle;
+                    document.getElementById('exerciseSetsInput').value = data.sets;
+                    document.getElementById('exerciseRepsInput').value = data.reps;
+                    document.getElementById('exerciseWeightInput').value = data.weight;
+                    addExerciseToDraft();
+                });
+            });
+
+            // Muscle Group Filter Bar
+            document.querySelectorAll('.muscle-filter-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    activeMuscleFilter = btn.getAttribute('data-muscle');
+
+                    document.querySelectorAll('.muscle-filter-btn').forEach(b => {
+                        b.className = 'muscle-filter-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold transition whitespace-nowrap bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700';
+                    });
+                    btn.className = 'muscle-filter-btn active-filter px-3.5 py-1.5 rounded-xl text-xs font-semibold transition whitespace-nowrap bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20';
+
+                    renderWorkoutsList();
+                });
+            });
+
+            // Search input
+            document.getElementById('searchWorkoutInput').addEventListener('input', (e) => {
+                searchQuery = e.target.value;
+                renderWorkoutsList();
+            });
+
+            // Focus Logger button in top bar
+            document.getElementById('focusLoggerBtn').addEventListener('click', () => {
+                const builderCard = document.getElementById('workoutBuilderCard');
+                builderCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                document.getElementById('workoutTitleInput').focus();
+            });
+
+            // Reset Demo Data buttons
+            document.getElementById('resetDemoBtn').addEventListener('click', handleResetDemoData);
+            document.getElementById('footerResetBtn').addEventListener('click', handleResetDemoData);
+
+            // Modal buttons
+            document.getElementById('modalCancelBtn').addEventListener('click', closeConfirmModal);
+            document.getElementById('modalConfirmBtn').addEventListener('click', () => {
+                if (typeof pendingConfirmAction === 'function') {
+                    pendingConfirmAction();
+                }
+                closeConfirmModal();
+            });
+        });
+    </script>
+</body>
+</html>
