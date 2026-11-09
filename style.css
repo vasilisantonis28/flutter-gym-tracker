@@ -1,0 +1,58 @@
+html, body {
+  font-family: 'Inter', sans-serif;
+  background-color: #1C1C28; /* Deep Navy */
+  overflow-x: hidden;
+  width: 100%;
+  -webkit-text-size-adjust: 100%;
+  touch-action: manipulation;
+}
+
+/* Dark theme cards */
+.glass-card {
+  background: #252536; /* Lighter navy for cards */
+  border: 1px solid #323248;
+}
+
+/* CRITICAL FOR iPHONE SAFARI:
+   16px font-size prevents iOS from auto-zooming the screen when tapping inputs! */
+.mobile-input,
+input,
+select,
+textarea {
+  font-size: 16px !important;
+}
+
+/* Remove number input arrows/spinners completely */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+/* Safe area padding for iPhone home indicator bar */
+.safe-bottom {
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+.animate-slide-up {
+  animation: slideUp 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
