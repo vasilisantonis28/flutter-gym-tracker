@@ -71,7 +71,7 @@
       <!-- ========================================== -->
       <div id="viewRoutines" class="hidden space-y-3.5">
         <div class="glass-card rounded-2xl p-3.5 bg-navy-800 border border-navy-700 shadow-sm">
-          <div class="flex items-start justify-between">
+          <div class="flex items-center justify-between">
             <div>
               <span id="lblRoutineTag" class="text-[10px] font-bold uppercase tracking-widest text-cyan-500">Cycle Builder</span>
               <h2 id="lblRoutineHeader" class="text-base font-black text-white mt-0.5">Your Routines</h2>
@@ -80,9 +80,6 @@
               + New
             </button>
           </div>
-          <p id="lblRoutineSub" class="text-[11px] text-gray-400 mt-2 leading-relaxed">
-            Create templates here. The app will cycle through them automatically on the Home tab.
-          </p>
         </div>
 
         <section id="routinesContainer" class="space-y-3"></section>
@@ -109,7 +106,7 @@
               <i data-lucide="bar-chart-3" class="w-3.5 h-3.5 text-cyan-500"></i>
             </div>
             <div id="statTotalVolume" class="text-2xl font-black text-white leading-tight">0 <span class="text-xs font-bold text-gray-500">kg</span></div>
-            <p id="lblStatVolumeSub" class="text-[10px] text-gray-500 mt-0.5 truncate">Sets × Reps × kg</p>
+            <p id="lblStatVolumeSub" class="text-[10px] text-gray-500 mt-0.5 truncate">Completed Sets × Reps × kg</p>
           </div>
         </section>
 
@@ -135,7 +132,7 @@
           <div class="flex items-center justify-between mb-3">
             <div>
               <span id="lblMonthTrackerTag" class="text-[9px] font-bold uppercase tracking-widest text-cyan-500 block">Calendar</span>
-              <h2 id="calMonthTitle" class="text-base font-black text-white">October 2026</h2>
+              <h2 id="calMonthTitle" class="text-base font-black text-white">November 2026</h2>
             </div>
             <div class="flex items-center gap-1">
               <button onclick="changeCalendarMonth(-1)" class="p-1.5 rounded-lg bg-navy-700 active:bg-navy-600 border border-navy-600 text-gray-300">
@@ -196,14 +193,14 @@
 
   </div>
 
-  <!-- Mobile Bottom-Sheet Modal: Add / Edit Routine/Workout -->
+  <!-- Mobile Bottom-Sheet Modal: Add / Edit Routine -->
   <div id="workoutModal" class="fixed inset-0 z-50 hidden items-end justify-center bg-black/70 backdrop-blur-sm">
     <div class="bg-navy-800 border-t border-navy-700 rounded-t-3xl w-full max-w-[430px] max-h-[92dvh] flex flex-col shadow-2xl overflow-hidden animate-slide-up">
       
       <div class="px-4 py-3.5 border-b border-navy-700 flex items-center justify-between">
         <div>
-          <h2 id="modalTitle" class="text-base font-extrabold text-white">Log New Workout</h2>
-          <p id="modalSubtitle" class="text-[11px] text-gray-400">Type your exercises, sets, reps, and weight</p>
+          <h2 id="modalTitle" class="text-base font-extrabold text-white">Routine</h2>
+          <p id="modalSubtitle" class="text-[11px] text-gray-400">Type your exercises and number of sets</p>
         </div>
         <button onclick="closeWorkoutModal()" class="p-1.5 rounded-xl text-gray-400 bg-navy-700 hover:bg-navy-600 transition-colors">
           <i data-lucide="x" class="w-5 h-5"></i>

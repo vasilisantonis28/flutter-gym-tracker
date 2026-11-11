@@ -1,41 +1,82 @@
 // ==========================================
 // 1. DATA MODELS (OOP Structure)
 // ==========================================
-const MUSCLE_KEYS = ['Chest', 'Back', 'Legs', 'Shoulders', 'Arms', 'Core'];
-
 class Exercise {
-  constructor(name, muscleGroup, sets, reps, weight, completedSets = 0) {
+  constructor(name, sets, setReps = null, setWeights = null, setCompleted = null) {
     this.name = name;
-    this.muscleGroup = muscleGroup;
-    this.sets = Number(sets) || 1;
-    this.reps = Number(reps) || 1;
-    this.weight = Number(weight) || 0;
-    this.completedSets = Number(completedSets) || 0;
+    this.sets = Math.max(1, Number(sets) || 1);
+
+    // Initialize per-set reps array (default empty string for unlogged sets)
+    if (Array.isArray(setReps) && setReps.length === this.sets) {
+      this.setReps = setReps.map(r => (r === '' || r === null || r === undefined) ? '' : Number(r));
+    } else {
+      this.setReps = Array(this.sets).fill('');
+    }
+
+    // Initialize per-set weights array (default empty string for unlogged sets)
+    if (Array.isArray(setWeights) && setWeights.length === this.sets) {
+      this.setWeights = setWeights.map(w => (w === '' || w === null || w === undefined) ? '' : Number(w));
+    } else {
+      this.setWeights = Array(this.sets).fill('');
+    }
+
+    // Auto-complete set if weight > 0
+    if (Array.isArray(setCompleted) && setCompleted.length === this.sets) {
+      this.setCompleted = setCompleted.map(Boolean);
+    } else {
+      this.setCompleted = this.setWeights.map(w => Number(w) > 0);
+    }
+  }
+
+  getCompletedCount() {
+    return this.setCompleted.filter(Boolean).length;
   }
 
   getVolume() {
-    return this.sets * this.reps * this.weight;
+    return this.setCompleted.reduce((total, isDone, idx) => {
+      if (!isDone) return total;
+      const r = Number(this.setReps[idx]) || 0;
+      const w = Number(this.setWeights[idx]) || 0;
+      return total + (r * w);
+    }, 0);
   }
 
   toMap() {
     return {
       name: this.name,
-      muscleGroup: this.muscleGroup,
       sets: this.sets,
-      reps: this.reps,
-      weight: this.weight,
-      completedSets: this.completedSets
+      setReps: this.setReps,
+      setWeights: this.setWeights,
+      setCompleted: this.setCompleted
     };
   }
 
   static fromMap(map) {
+    const setsCount = Math.max(1, Number(map.sets) || 1);
+    const legacyReps = map.reps !== undefined ? Number(map.reps) : '';
+    const legacyWeight = map.weight !== undefined ? Number(map.weight) : '';
+
+    const repsArr = Array.isArray(map.setReps) && map.setReps.length === setsCount
+      ? map.setReps
+      : Array(setsCount).fill(legacyReps);
+
+    const weightsArr = Array.isArray(map.setWeights) && map.setWeights.length === setsCount
+      ? map.setWeights
+      : Array(setsCount).fill(legacyWeight);
+
+    let completedArr;
+    if (Array.isArray(map.setCompleted) && map.setCompleted.length === setsCount) {
+      completedArr = map.setCompleted;
+    } else {
+      completedArr = weightsArr.map(w => Number(w) > 0);
+    }
+
     return new Exercise(
       map.name,
-      map.muscleGroup,
-      map.sets,
-      map.reps,
-      map.weight,
-      map.completedSets || 0
+      setsCount,
+      repsArr,
+      weightsArr,
+      completedArr
     );
   }
 }
@@ -130,16 +171,16 @@ function loadData() {
   } else {
     routines = [
       new Routine('r-1', 'Push Day', [
-        new Exercise('Bench Press', 'Chest', 4, 8, 80),
-        new Exercise('Shoulder Press', 'Shoulders', 3, 10, 40)
+        new Exercise('Bench Press', 4),
+        new Exercise('Shoulder Press', 3)
       ]),
       new Routine('r-2', 'Pull Day', [
-        new Exercise('Pull-ups', 'Back', 4, 8, 0),
-        new Exercise('Barbell Curls', 'Arms', 3, 12, 30)
+        new Exercise('Pull-ups', 4),
+        new Exercise('Barbell Curls', 3)
       ]),
       new Routine('r-3', 'Leg Day', [
-        new Exercise('Squats', 'Legs', 4, 6, 100),
-        new Exercise('Leg Press', 'Legs', 3, 12, 160)
+        new Exercise('Squats', 4),
+        new Exercise('Leg Press', 3)
       ])
     ];
     saveRoutines();
@@ -169,9 +210,7 @@ function setCycleIndex(newIdx) {
 }
 
 function validateCycleIndex() {
-  if (routines.length === 0) {
-    cycleIndex = 0;
-  } else if (cycleIndex >= routines.length) {
+  if (routines.length === 0 || cycleIndex >= routines.length) {
     cycleIndex = 0;
   }
 }
@@ -215,14 +254,6 @@ function switchView(view) {
 // ==========================================
 // 4. UI RENDERERS
 // ==========================================
-const muscleBadgeColors = {
-  Chest: 'bg-rose-500/10 text-rose-400 border-rose-500/20',
-  Back: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
-  Legs: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-  Shoulders: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
-  Arms: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-  Core: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20'
-};
 
 // --- VIEW 1: HOME ---
 function startWorkout() {
@@ -232,7 +263,13 @@ function startWorkout() {
     'w-' + Date.now(),
     routine.title,
     formatDateKey(new Date()),
-    routine.exercises.map(ex => new Exercise(ex.name, ex.muscleGroup, ex.sets, ex.reps, ex.weight, 0))
+    routine.exercises.map(ex => new Exercise(
+      ex.name,
+      ex.sets,
+      Array(ex.sets).fill(''),
+      Array(ex.sets).fill(''),
+      Array(ex.sets).fill(false)
+    ))
   );
   renderHomeView();
 }
@@ -253,11 +290,36 @@ function completeWorkout() {
   switchView('month');
 }
 
-function toggleActiveSetCompletion(exerciseIndex, setNumber) {
+function handleSetInput(exerciseIndex, setIndex, field, rawValue) {
   if (!activeWorkoutState || !activeWorkoutState.exercises[exerciseIndex]) return;
   const ex = activeWorkoutState.exercises[exerciseIndex];
-  ex.completedSets = ex.completedSets === setNumber ? setNumber - 1 : setNumber;
-  renderHomeView();
+
+  if (field === 'reps') {
+    ex.setReps[setIndex] = rawValue === '' ? '' : (parseInt(rawValue, 10) || 0);
+  } else if (field === 'weight') {
+    ex.setWeights[setIndex] = rawValue === '' ? '' : parseFloat(rawValue);
+  }
+
+  // Auto-mark as Done as soon as weight is entered (> 0)
+  const weightVal = parseFloat(ex.setWeights[setIndex]);
+  const isDone = !isNaN(weightVal) && weightVal > 0;
+  ex.setCompleted[setIndex] = isDone;
+
+  // Update row styling dynamically without re-rendering DOM (preserves input focus)
+  const rowEl = document.getElementById(`set-row-${exerciseIndex}-${setIndex}`);
+  const lblEl = document.getElementById(`set-lbl-${exerciseIndex}-${setIndex}`);
+  const statusEl = document.getElementById(`set-status-${exerciseIndex}-${setIndex}`);
+
+  if (rowEl && lblEl && statusEl) {
+    rowEl.className = `flex items-center justify-between gap-2 py-2 px-3 rounded-xl bg-navy-900 border transition-colors ${
+      isDone ? 'border-cyan-500/60 bg-cyan-500/5' : 'border-navy-700'
+    }`;
+    lblEl.className = `text-xs font-extrabold w-12 ${isDone ? 'text-cyan-400' : 'text-gray-400'}`;
+    statusEl.className = `w-6 h-6 rounded-lg flex items-center justify-center text-xs font-black transition-all shrink-0 ${
+      isDone ? 'bg-cyan-500 text-navy-900 shadow-sm shadow-cyan-500/30' : 'bg-navy-800 text-gray-600 border border-navy-700'
+    }`;
+    statusEl.textContent = isDone ? '✓' : '•';
+  }
 }
 
 function renderHomeView() {
@@ -290,7 +352,7 @@ function renderHomeView() {
           ${nextRoutine.exercises.map(ex => `
             <div class="flex justify-between text-xs text-gray-300 border-b border-navy-700 pb-1.5 last:border-0 last:pb-0">
               <span class="font-semibold truncate pr-2">${ex.name}</span>
-              <span class="shrink-0 text-gray-500">${ex.sets}×${ex.reps} • ${ex.weight}kg</span>
+              <span class="shrink-0 text-cyan-400 font-bold">${ex.sets} sets</span>
             </div>
           `).join('')}
         </div>
@@ -307,42 +369,68 @@ function renderHomeView() {
     `;
   } else {
     const exercisesHtml = activeWorkoutState.exercises.map((ex, idx) => {
-      const badgeStyle = muscleBadgeColors[ex.muscleGroup] || muscleBadgeColors.Arms;
-      let setPillsHtml = '';
-      for (let s = 1; s <= ex.sets; s++) {
-        const isDone = s <= ex.completedSets;
-        setPillsHtml += `
-          <button
-            onclick="toggleActiveSetCompletion(${idx}, ${s})"
-            class="px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 border ${
-              isDone
-                ? 'bg-cyan-500 text-navy-900 border-cyan-500 shadow-sm shadow-cyan-500/20'
-                : 'bg-navy-900 text-gray-400 border-navy-700 hover:bg-navy-700'
-            }"
-          >
-            <span>S${s}</span>
-            ${isDone ? '✓' : ''}
-          </button>
+      let setRowsHtml = '';
+      for (let s = 0; s < ex.sets; s++) {
+        const isDone = ex.setCompleted[s];
+        const currentReps = ex.setReps[s] !== undefined ? ex.setReps[s] : '';
+        const currentWeight = ex.setWeights[s] !== undefined ? ex.setWeights[s] : '';
+
+        setRowsHtml += `
+          <div id="set-row-${idx}-${s}" class="flex items-center justify-between gap-2 py-2 px-3 rounded-xl bg-navy-900 border transition-colors ${isDone ? 'border-cyan-500/60 bg-cyan-500/5' : 'border-navy-700'}">
+            <span id="set-lbl-${idx}-${s}" class="text-xs font-extrabold w-12 ${isDone ? 'text-cyan-400' : 'text-gray-400'}">Set ${s + 1}</span>
+            
+            <div class="flex items-center gap-2 flex-1 justify-end">
+              <!-- Reps Input -->
+              <div class="flex items-center gap-1">
+                <input
+                  type="text"
+                  inputmode="numeric"
+                  pattern="[0-9]*"
+                  placeholder="0"
+                  value="${currentReps}"
+                  oninput="this.value = this.value.replace(/[^0-9]/g, ''); handleSetInput(${idx}, ${s}, 'reps', this.value)"
+                  class="mobile-input w-14 py-1 px-2 bg-navy-800 border border-navy-700 rounded-lg text-center text-white font-bold placeholder-gray-600 focus:outline-none focus:border-cyan-500"
+                >
+                <span class="text-[10px] font-bold text-gray-400">reps</span>
+              </div>
+
+              <!-- Weight Input (Triggers Auto-Done) -->
+              <div class="flex items-center gap-1">
+                <input
+                  type="text"
+                  inputmode="decimal"
+                  placeholder="0"
+                  value="${currentWeight}"
+                  oninput="this.value = this.value.replace(/[^0-9.]/g, ''); handleSetInput(${idx}, ${s}, 'weight', this.value)"
+                  class="mobile-input w-16 py-1 px-2 bg-navy-800 border border-navy-700 rounded-lg text-center text-cyan-400 font-bold placeholder-gray-600 focus:outline-none focus:border-cyan-500"
+                >
+                <span class="text-[10px] font-bold text-gray-400">kg</span>
+              </div>
+            </div>
+
+            <!-- Auto Done Indicator -->
+            <div id="set-status-${idx}-${s}" class="w-6 h-6 rounded-lg flex items-center justify-center text-xs font-black transition-all shrink-0 ${
+              isDone ? 'bg-cyan-500 text-navy-900 shadow-sm shadow-cyan-500/30' : 'bg-navy-800 text-gray-600 border border-navy-700'
+            }">
+              ${isDone ? '✓' : '•'}
+            </div>
+          </div>
         `;
       }
 
       return `
         <div class="flex flex-col gap-2 py-3 px-3.5 rounded-xl bg-navy-800 border border-navy-700 shadow-sm">
-          <div class="flex items-start justify-between gap-2">
-            <div class="min-w-0">
-              <div class="flex items-center gap-1.5 flex-wrap">
-                <span class="text-xs font-black text-gray-500">${idx + 1}.</span>
-                <span class="text-sm font-bold text-white leading-snug">${ex.name}</span>
-              </div>
-              <span class="inline-block mt-1 text-[10px] font-bold px-1.5 py-0.5 rounded border ${badgeStyle}">${ex.muscleGroup}</span>
+          <div class="flex items-center justify-between gap-2">
+            <div class="flex items-center gap-1.5 min-w-0">
+              <span class="text-xs font-black text-gray-500">${idx + 1}.</span>
+              <span class="text-sm font-bold text-white truncate">${ex.name}</span>
             </div>
-            <div class="text-right shrink-0">
-              <div class="text-sm font-extrabold text-cyan-500">${ex.weight} kg</div>
-              <div class="text-[11px] text-gray-400 font-semibold">${ex.sets} × ${ex.reps} reps</div>
+            <div class="text-[11px] text-cyan-400 font-bold shrink-0">
+              ${ex.sets} sets
             </div>
           </div>
-          <div class="flex items-center gap-1.5 flex-wrap pt-2 border-t border-navy-700 mt-1">
-            ${setPillsHtml}
+          <div class="space-y-1.5 pt-2 border-t border-navy-700 mt-0.5">
+            ${setRowsHtml}
           </div>
         </div>
       `;
@@ -351,10 +439,12 @@ function renderHomeView() {
     container.innerHTML = `
       <div class="flex items-center justify-between px-1">
         <div>
-          <div class="text-[10px] font-bold uppercase tracking-widest text-cyan-500 flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span> Active Session</div>
+          <div class="text-[10px] font-bold uppercase tracking-widest text-cyan-500 flex items-center gap-1">
+            <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span> Active Session
+          </div>
           <h2 class="text-base font-black text-white">${activeWorkoutState.title}</h2>
         </div>
-        <button onclick="completeWorkout()" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-navy-700 text-white shadow-md hover:bg-navy-600 border border-navy-600 transition-colors">
+        <button onclick="completeWorkout()" class="px-3 py-1.5 rounded-xl text-xs font-extrabold bg-cyan-500 text-navy-900 shadow-md shadow-cyan-500/20 hover:bg-cyan-400 transition-colors">
           Finish & Save
         </button>
       </div>
@@ -379,7 +469,7 @@ function renderRoutinesView() {
     const exListHtml = r.exercises.map(ex => `
       <div class="flex items-center justify-between text-[11px] py-1 border-b border-navy-700 last:border-none">
         <span class="text-gray-300 font-semibold truncate pr-2">${ex.name}</span>
-        <span class="text-cyan-500 font-bold shrink-0">${ex.sets}×${ex.reps} • ${ex.weight}kg</span>
+        <span class="text-cyan-500 font-bold shrink-0">${ex.sets} sets</span>
       </div>
     `).join('');
 
@@ -545,12 +635,23 @@ function renderSelectedDayCard() {
         <span class="text-cyan-500 font-bold">${w.getTotalVolume().toLocaleString()} kg</span>
       </div>
       <div class="space-y-1 pt-1 border-t border-navy-700 mt-1.5">
-        ${w.exercises.map(ex => `
-          <div class="flex justify-between text-[11px] text-gray-300">
-            <span class="truncate pr-2">${ex.name}</span>
-            <span class="font-semibold text-gray-500 shrink-0">${ex.completedSets}/${ex.sets}s × ${ex.reps}r @ ${ex.weight}kg</span>
-          </div>
-        `).join('')}
+        ${w.exercises.map(ex => {
+          const completedDetails = ex.setCompleted
+            .map((done, i) => done ? `${ex.setReps[i] || 0}×${ex.setWeights[i]}kg` : null)
+            .filter(Boolean)
+            .join(', ');
+
+          const displayDetails = completedDetails
+            ? `${ex.getCompletedCount()}/${ex.sets}s (${completedDetails})`
+            : `0/${ex.sets} sets`;
+
+          return `
+            <div class="flex justify-between text-[11px] text-gray-300 gap-2">
+              <span class="truncate">${ex.name}</span>
+              <span class="font-semibold text-gray-400 shrink-0">${displayDetails}</span>
+            </div>
+          `;
+        }).join('')}
       </div>
     </div>
   `).join('');
@@ -576,7 +677,7 @@ function deleteHistoryItem(id) {
 }
 
 // ==========================================
-// 5. MODAL (ROUTINES)
+// 5. MODAL (ROUTINES - NAME & SETS ONLY)
 // ==========================================
 function openWorkoutModal(routineId = null, isRoutineMode = true) {
   const modal = document.getElementById('workoutModal');
@@ -616,71 +717,36 @@ function closeWorkoutModal() {
 function addExerciseRow(exercise = null) {
   const container = document.getElementById('exerciseRowsContainer');
   const row = document.createElement('div');
-  row.className = 'exercise-row bg-navy-800 border border-navy-700 p-2.5 rounded-xl space-y-2 shadow-sm';
-
-  const optionsHtml = MUSCLE_KEYS.map(g =>
-    `<option value="${g}" ${exercise && exercise.muscleGroup === g ? 'selected' : ''}>${g}</option>`
-  ).join('');
+  row.className = 'exercise-row bg-navy-800 border border-navy-700 p-2.5 rounded-xl flex items-center gap-2 shadow-sm';
 
   row.innerHTML = `
-    <div class="flex items-center gap-2">
+    <input
+      type="text"
+      placeholder="Exercise name"
+      required
+      value="${exercise ? exercise.name : ''}"
+      class="ex-name mobile-input flex-1 min-w-0 px-3 py-1.5 bg-navy-900 border border-navy-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500 transition-colors"
+    >
+    <div class="flex items-center gap-1.5 shrink-0">
       <input
         type="text"
-        placeholder="Exercise name"
+        inputmode="numeric"
+        pattern="[0-9]*"
+        oninput="this.value = this.value.replace(/[^0-9]/g, '')"
+        placeholder="Sets"
         required
-        value="${exercise ? exercise.name : ''}"
-        class="ex-name mobile-input flex-1 min-w-0 px-2.5 py-1.5 bg-navy-900 border border-navy-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500 focus:bg-navy-800 transition-colors"
+        value="${exercise ? exercise.sets : '3'}"
+        class="ex-sets mobile-input w-14 px-2 py-1.5 bg-navy-900 border border-navy-700 rounded-lg text-cyan-400 font-bold text-center focus:outline-none focus:border-cyan-500 transition-colors"
       >
-      <button
-        type="button"
-        onclick="this.closest('.exercise-row').remove()"
-        class="p-1.5 text-gray-500 hover:text-red-400 hover:bg-navy-700 rounded-lg shrink-0 transition-colors"
-      >
-        <i data-lucide="trash-2" class="w-4 h-4"></i>
-      </button>
+      <span class="text-[11px] font-bold text-gray-400">sets</span>
     </div>
-    <div class="grid grid-cols-12 gap-1.5 items-center">
-      <div class="col-span-5">
-        <select class="ex-group mobile-input w-full px-2 py-1.5 bg-navy-900 border border-navy-700 rounded-lg text-gray-300 focus:outline-none focus:border-cyan-500 focus:bg-navy-800 transition-colors">
-          ${optionsHtml}
-        </select>
-      </div>
-      <div class="col-span-2">
-        <input
-          type="text"
-          inputmode="numeric"
-          pattern="[0-9]*"
-          oninput="this.value = this.value.replace(/[^0-9]/g, '')"
-          placeholder="Sets"
-          required
-          value="${exercise ? exercise.sets : '3'}"
-          class="ex-sets mobile-input w-full px-1 py-1.5 bg-navy-900 border border-navy-700 rounded-lg text-white font-semibold text-center focus:outline-none focus:border-cyan-500 focus:bg-navy-800 transition-colors"
-        >
-      </div>
-      <div class="col-span-2">
-        <input
-          type="text"
-          inputmode="numeric"
-          pattern="[0-9]*"
-          oninput="this.value = this.value.replace(/[^0-9]/g, '')"
-          placeholder="Reps"
-          required
-          value="${exercise ? exercise.reps : '10'}"
-          class="ex-reps mobile-input w-full px-1 py-1.5 bg-navy-900 border border-navy-700 rounded-lg text-white font-semibold text-center focus:outline-none focus:border-cyan-500 focus:bg-navy-800 transition-colors"
-        >
-      </div>
-      <div class="col-span-3">
-        <input
-          type="text"
-          inputmode="decimal"
-          oninput="this.value = this.value.replace(/[^0-9.]/g, '')"
-          placeholder="kg"
-          required
-          value="${exercise ? exercise.weight : '60'}"
-          class="ex-weight mobile-input w-full px-1.5 py-1.5 bg-navy-900 border border-navy-700 rounded-lg text-cyan-500 font-bold text-center focus:outline-none focus:border-cyan-500 focus:bg-navy-800 transition-colors"
-        >
-      </div>
-    </div>
+    <button
+      type="button"
+      onclick="this.closest('.exercise-row').remove()"
+      class="p-1.5 text-gray-500 hover:text-red-400 hover:bg-navy-700 rounded-lg shrink-0 transition-colors"
+    >
+      <i data-lucide="trash-2" class="w-4 h-4"></i>
+    </button>
   `;
   container.appendChild(row);
   lucide.createIcons();
@@ -697,13 +763,10 @@ function saveModalData(event) {
 
   rowElements.forEach(row => {
     const name = row.querySelector('.ex-name').value.trim();
-    const group = row.querySelector('.ex-group').value;
     const sets = parseInt(row.querySelector('.ex-sets').value, 10) || 1;
-    const reps = parseInt(row.querySelector('.ex-reps').value, 10) || 1;
-    const weight = parseFloat(row.querySelector('.ex-weight').value) || 0;
 
     if (name) {
-      exercises.push(new Exercise(name, group, sets, reps, weight, 0));
+      exercises.push(new Exercise(name, sets));
     }
   });
 
